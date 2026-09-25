@@ -28,9 +28,7 @@ private class CalculMontantTest {
                 new OrderItem(OrderId = order2.Id, PricebookEntryId = pbe.Id, Quantity = 1, UnitPrice = 100)
         };
 
-        Test.startTest();
         update new List<Order>{ order1, order2 };
-        Test.stopTest();
 
         Order updatedOrder1 = [SELECT NetAmount__c FROM Order WHERE Id = :order1.Id];
         Order updatedOrder2 = [SELECT NetAmount__c FROM Order WHERE Id = :order2.Id];

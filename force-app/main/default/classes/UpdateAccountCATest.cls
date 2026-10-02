@@ -40,6 +40,10 @@ private class UpdateAccountCATest {
         }
         insert itemsToInsert;
 
+        for (Order o : ordersToInsert) {
+            o.Status = 'Activated';
+        }
+
         Test.startTest();
         update ordersToInsert;
         Test.stopTest();

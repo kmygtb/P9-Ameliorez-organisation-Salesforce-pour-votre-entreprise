@@ -2,41 +2,23 @@
 private class UpdateAccountCATest {
 
     @isTest
-    static void testBulkUpdate_FailsOnOriginalBuggyTrigger() {
-        Account testAccount = new Account(Name = 'Test Bulk Account', Chiffre_d_affaire__c = 0);
+    static void testBulkActivation_UpdatesChiffreAffaireOnce() {
+        Account testAccount = TestDataFactory.buildAccount('Test Bulk Account');
         insert testAccount;
 
-        Product2 pd = new Product2(Name = 'Produit Test Bulk', IsActive = true);
-        insert pd;
-
-        PricebookEntry pbe = new PricebookEntry(
-                Pricebook2Id = Test.getStandardPricebookId(),
-                Product2Id = pd.Id,
-                UnitPrice = 100,
-                IsActive = true
-        );
-        insert pbe;
+        PricebookEntry pbe = TestDataFactory.createPricebookEntry(100);
 
         List<Order> ordersToInsert = new List<Order>();
         for (Integer i = 0; i < 150; i++) {
-            ordersToInsert.add(new Order(
-                    AccountId = testAccount.Id,
-                    EffectiveDate = Date.today(),
-                    Status = 'Draft',
-                    Pricebook2Id = Test.getStandardPricebookId(),
-                    ShipmentCost__c = 10
-            ));
+            Order o = TestDataFactory.buildDraftOrder(testAccount.Id);
+            o.ShipmentCost__c = 10;
+            ordersToInsert.add(o);
         }
         insert ordersToInsert;
 
         List<OrderItem> itemsToInsert = new List<OrderItem>();
         for (Order o : ordersToInsert) {
-            itemsToInsert.add(new OrderItem(
-                    OrderId = o.Id,
-                    PricebookEntryId = pbe.Id,
-                    Quantity = 1,
-                    UnitPrice = 100
-            ));
+            itemsToInsert.add(TestDataFactory.buildOrderItem(o.Id, pbe.Id, 1, 100));
         }
         insert itemsToInsert;
 
@@ -47,5 +29,8 @@ private class UpdateAccountCATest {
         Test.startTest();
         update ordersToInsert;
         Test.stopTest();
+
+        Account updatedAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
+        System.assertEquals(15000, updatedAccount.Chiffre_d_affaire__c, 'Les 150 commandes activees doivent etre comptees une seule fois chacune');
     }
 }

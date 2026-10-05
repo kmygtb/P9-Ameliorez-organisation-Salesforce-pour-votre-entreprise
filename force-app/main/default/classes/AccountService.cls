@@ -15,4 +15,16 @@ public with sharing class AccountService {
 
         update accountsByID.values();
     }
+
+    public static void recalculateChiffreAffaire(Set<Id> accountIds) {
+    Map<Id, Decimal> totalByAccount = OrderSelector.getActivatedTotalByAccountIds(accountIds);
+
+    List<Account> accountsToUpdate = new List<Account>();
+    for (Id accId : accountIds) {
+        Decimal total = totalByAccount.containsKey(accId) ? totalByAccount.get(accId) : 0;
+        accountsToUpdate.add(new Account(Id = accId, Chiffre_d_affaire__c = total));
+    }
+
+    update accountsToUpdate;
+}
 }

@@ -1,0 +1,63 @@
+name: Deploy and Validate Metadata
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
+jobs:
+  sfdxvalidate:
+    name: "Run SFDX Validate"
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install SFDX CLI and sfdx-git-delta plugin
+        run: |
+          npm install -g @salesforce/cli@latest
+          echo y | sf plugins install sfdx-git-delta
+
+      - name: 'Authentification Salesforce'
+        env:
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
+        run: echo "$SFDX_AUTH_URL" | sf org login sfdx-url --alias fasha --set-default --sfdx-url-stdin
+
+      - name: 'Generate metadata delta'
+        id: delta
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          mkdir -p .temp
+          sf sgd source delta --from "$BASE_SHA" --to "HEAD" --output-dir .temp
+          cat .temp/package/package.xml
+          if grep -q "<types>" .temp/package/package.xml .temp/destructiveChanges/destructiveChanges.xml; then
+            echo "Des composants sont a deployer"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Rien a deployer"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'Valider le deploiement (sans rien enregistrer)'
+        if: github.ref != 'refs/heads/main' && steps.delta.outputs.has_changes == 'true'
+        run: sf project deploy start --dry-run --manifest .temp/package/package.xml --post-destructive-changes .temp/destructiveChanges/destructiveChanges.xml --test-level RunLocalTests --target-org fasha
+
+      - name: 'Déployer les métadonnées sur la branch main'
+        if: github.ref == 'refs/heads/main' && steps.delta.outputs.has_changes == 'true'
+        run: sf project deploy start --manifest .temp/package/package.xml --post-destructive-changes .temp/destructiveChanges/destructiveChanges.xml --test-level RunLocalTests --target-org fasha

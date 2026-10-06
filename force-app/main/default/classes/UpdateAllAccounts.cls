@@ -1,3 +1,15 @@
+/**
+ * Batch de recalcul global du chiffre d'affaires des comptes.
+ *
+ * Prévu pour la migration de données (note de cadrage) : il recalcule, pour
+ * chaque compte ayant au moins une commande Activated, son chiffre d'affaires
+ * depuis zéro, sans dépendre du trigger UpdateAccountCA. Le résultat est le
+ * même quel que soit le nombre d'exécutions.
+ *
+ * Lancement manuel : Database.executeBatch(new UpdateAllAccounts());
+ */
+
+
 global class UpdateAllAccounts implements Database.Batchable<sObject> {
 
     global Database.QueryLocator start(Database.BatchableContext info) {

@@ -40,13 +40,25 @@ jobs:
         run: echo "$SFDX_AUTH_URL" | sf org login sfdx-url --alias fasha --set-default --sfdx-url-stdin
 
       - name: 'Generate metadata delta'
+        id: delta
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           mkdir -p .temp
           sf sgd source delta --from "$BASE_SHA" --to "HEAD" --output-dir .temp
           cat .temp/package/package.xml
+          if grep -q "<types>" .temp/package/package.xml .temp/destructiveChanges/destructiveChanges.xml; then
+            echo "Des composants sont a deployer"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Rien a deployer"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'Valider le deploiement (sans rien enregistrer)'
+        if: github.ref != 'refs/heads/main' && steps.delta.outputs.has_changes == 'true'
+        run: sf project deploy start --dry-run --manifest .temp/package/package.xml --post-destructive-changes .temp/destructiveChanges/destructiveChanges.xml --test-level RunLocalTests --target-org fasha
 
       - name: 'Déployer les métadonnées sur la branch main'
-        if: github.ref == 'refs/heads/main'
-        run: echo "etape a ecrire"
+        if: github.ref == 'refs/heads/main' && steps.delta.outputs.has_changes == 'true'
+        run: sf project deploy start --manifest .temp/package/package.xml --post-destructive-changes .temp/destructiveChanges/destructiveChanges.xml --test-level RunLocalTests --target-org fasha

@@ -8,7 +8,7 @@ on:
   push:
     branches:
       - main
-      - feature/ci-pipeline   # MODIFIÉ : temporaire, pour tester sur cette branche
+      - feature/ci-pipeline   # temporaire : pour tester sur cette branche
 
 jobs:
   sfdxvalidate:
@@ -32,16 +32,21 @@ jobs:
       - name: Install SFDX CLI and sfdx-git-delta plugin
         run: |
           npm install -g @salesforce/cli@latest
-          echo "y" | npm install sfdx-git-delta@3.3.0 -g
+          echo y | sf plugins install sfdx-git-delta
 
       - name: 'Authentification Salesforce'
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: echo "$SFDX_AUTH_URL" | sf org login sfdx-url --alias fasha --set-default --sfdx-url-stdin
 
-      - name: 'Generate metadata delta pull request'
-        run: echo "etape a ecrire"   # MODIFIÉ : provisoire
+      - name: 'Generate metadata delta'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          mkdir -p .temp
+          sf sgd source delta --from "$BASE_SHA" --to "HEAD" --output-dir .temp
+          cat .temp/package/package.xml
 
       - name: 'Déployer les métadonnées sur la branch main'
         if: github.ref == 'refs/heads/main'
-        run: echo "etape a ecrire"   # MODIFIÉ : provisoire
+        run: echo "etape a ecrire"

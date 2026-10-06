@@ -1,7 +1,7 @@
 import { LightningElement, api } from 'lwc';
 import getSumOrdersByAccount from '@salesforce/apex/MyTeamOrdersController.getSumOrdersByAccount';
 
-export default class Orders extends LightningElement {
+export default class AccountOrdersTotal extends LightningElement {
 sumOrdersOfCurrentAccount;
 hasPositiveAmount;
 @api recordId;

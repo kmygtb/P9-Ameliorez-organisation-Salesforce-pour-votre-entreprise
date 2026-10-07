@@ -43,4 +43,36 @@ private class UpdateAllAccountsTest {
         System.assertEquals(150, updatedA.Chiffre_d_affaire__c, 'Le CA du compte A doit etre recalcule depuis zero, sans la commande Draft');
         System.assertEquals(200, updatedB.Chiffre_d_affaire__c, 'Le CA du compte B doit correspondre a sa commande activee');
     }
+
+        @isTest
+    static void testBatch_ProductPriceChange_DoesNotImpactChiffreAffaire() {
+        Account testAccount = TestDataFactory.buildAccount('Compte Prix Produit Batch');
+        insert testAccount;
+
+        PricebookEntry pbe = TestDataFactory.createPricebookEntry(100);
+
+        Order order = TestDataFactory.buildDraftOrder(testAccount.Id);
+        insert order;
+        insert TestDataFactory.buildOrderItem(order.Id, pbe.Id, 3, 100);
+
+        order.Status = 'Activated';
+        update order;
+
+        // Mise a jour hebdomadaire du prix du produit
+        pbe.UnitPrice = 200;
+        update pbe;
+
+        // Chiffre daffaires volontairement faux, comme apres une migration
+        update new Account(Id = testAccount.Id, Chiffre_d_affaire__c = 12345);
+
+        Test.startTest();
+        Database.executeBatch(new UpdateAllAccounts());
+        Test.stopTest();
+
+        Order orderAfterBatch = [SELECT TotalAmount FROM Order WHERE Id = :order.Id];
+        Account accountAfterBatch = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
+
+        System.assertEquals(300, orderAfterBatch.TotalAmount, 'Le montant de la commande activee ne doit pas suivre le nouveau prix');
+        System.assertEquals(300, accountAfterBatch.Chiffre_d_affaire__c, 'Le batch doit recalculer 300, pas 600 ni la valeur perimee');
+    }
 }

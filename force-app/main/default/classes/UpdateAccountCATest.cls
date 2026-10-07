@@ -57,4 +57,34 @@ private class UpdateAccountCATest {
         Account afterModification = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
         System.assertEquals(100, afterModification.Chiffre_d_affaire__c, 'Modifier une commande deja activee ne doit pas la recompter');
     }
+
+        @isTest
+    static void testProductPriceChange_DoesNotChangeActivatedOrderNorChiffreAffaire() {
+        Account testAccount = TestDataFactory.buildAccount('Compte Prix Produit');
+        insert testAccount;
+
+        PricebookEntry pbe = TestDataFactory.createPricebookEntry(100);
+
+        Order order = TestDataFactory.buildDraftOrder(testAccount.Id);
+        insert order;
+        insert TestDataFactory.buildOrderItem(order.Id, pbe.Id, 3, 100);
+
+        order.Status = 'Activated';
+        update order;
+
+        Account afterActivation = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
+        System.assertEquals(300, afterActivation.Chiffre_d_affaire__c, 'La commande activee doit etre comptee : 3 x 100');
+
+        // Mise a jour hebdomadaire du prix du produit
+        pbe.UnitPrice = 200;
+        update pbe;
+
+        OrderItem itemAfterPriceChange = [SELECT UnitPrice FROM OrderItem WHERE OrderId = :order.Id];
+        Order orderAfterPriceChange = [SELECT TotalAmount FROM Order WHERE Id = :order.Id];
+        Account accountAfterPriceChange = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
+
+        System.assertEquals(100, itemAfterPriceChange.UnitPrice, 'La ligne de commande doit garder son prix dorigine');
+        System.assertEquals(300, orderAfterPriceChange.TotalAmount, 'Le montant de la commande activee ne doit pas suivre le nouveau prix');
+        System.assertEquals(300, accountAfterPriceChange.Chiffre_d_affaire__c, 'Le chiffre daffaires ne doit pas changer apres une mise a jour de prix');
+    }
 }

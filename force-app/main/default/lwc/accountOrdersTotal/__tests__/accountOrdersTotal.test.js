@@ -1,9 +1,9 @@
 import { createElement } from 'lwc';
 import AccountOrdersTotal from 'c/accountOrdersTotal';
-import getSumOrdersByAccount from '@salesforce/apex/MyTeamOrdersController.getSumOrdersByAccount';
+import getSumOrdersByAccount from '@salesforce/apex/OrdersController.getSumOrdersByAccount';
 
 jest.mock(
-    '@salesforce/apex/MyTeamOrdersController.getSumOrdersByAccount',
+    '@salesforce/apex/OrdersController.getSumOrdersByAccount',
     () => {
         return { default: jest.fn() };
     },

@@ -1,5 +1,5 @@
 @isTest
-private class MyTeamOrdersControllerTest {
+private class OrdersControllerTest {
 
     @isTest
     static void testGetSumOrdersByAccount_FiltersCorrectlyByAccountAndStatus() {
@@ -24,7 +24,7 @@ private class MyTeamOrdersControllerTest {
         orderB_Activated.Status = 'Activated';
         update new List<Order>{ orderA_Activated, orderB_Activated };
 
-        Decimal result = MyTeamOrdersController.getSumOrdersByAccount(accountA.Id);
+        Decimal result = OrdersController.getSumOrdersByAccount(accountA.Id);
 
         System.assertEquals(100, result, 'Le total doit correspondre uniquement au compte A, statut Activated');
     }

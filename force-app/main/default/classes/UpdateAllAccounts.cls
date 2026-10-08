@@ -10,7 +10,7 @@
  */
 
 global class UpdateAllAccounts implements Database.Batchable<sObject> {
-  global Database.QueryLocator start(Database.BatchableContext info) {
+  global Database.QueryLocator start(Database.BatchableContext batchContext) {
     return Database.getQueryLocator(
       [
         SELECT Id
@@ -20,11 +20,14 @@ global class UpdateAllAccounts implements Database.Batchable<sObject> {
     );
   }
 
-  global void execute(Database.BatchableContext info, List<Account> scope) {
-    Set<Id> setAccountIds = (new Map<Id, SObject>(scope)).keySet();
-    AccountService.recalculateChiffreAffaire(setAccountIds);
+  global void execute(
+    Database.BatchableContext batchContext,
+    List<Account> scope
+  ) {
+    Set<Id> accountIds = (new Map<Id, SObject>(scope)).keySet();
+    AccountService.recalculateChiffreAffaire(accountIds);
   }
 
-  global void finish(Database.BatchableContext info) {
+  global void finish(Database.BatchableContext batchContext) {
   }
 }

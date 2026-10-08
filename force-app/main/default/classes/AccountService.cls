@@ -5,17 +5,17 @@ public with sharing class AccountService {
       accountIds.add(ord.AccountId);
     }
 
-    Map<Id, Account> accountsByID = AccountSelector.getByIds(accountIds);
+    Map<Id, Account> accountsById = AccountSelector.getByIds(accountIds);
 
     for (Order ord : orders) {
-      Account acc = accountsByID.get(ord.AccountId);
+      Account acc = accountsById.get(ord.AccountId);
       Decimal currentCA = acc.Chiffre_d_affaire__c == null
         ? 0
         : acc.Chiffre_d_affaire__c;
       acc.Chiffre_d_affaire__c = currentCA + ord.TotalAmount;
     }
 
-    update accountsByID.values();
+    update accountsById.values();
   }
 
   public static void recalculateChiffreAffaire(Set<Id> accountIds) {

@@ -1,90 +1,150 @@
 @isTest
 private class UpdateAccountCATest {
+  @isTest
+  static void testBulkActivation_UpdatesChiffreAffaireOnce() {
+    Account testAccount = TestDataFactory.buildAccount('Test Bulk Account');
+    insert testAccount;
 
-    @isTest
-    static void testBulkActivation_UpdatesChiffreAffaireOnce() {
-        Account testAccount = TestDataFactory.buildAccount('Test Bulk Account');
-        insert testAccount;
+    PricebookEntry pbe = TestDataFactory.createPricebookEntry(100);
 
-        PricebookEntry pbe = TestDataFactory.createPricebookEntry(100);
-
-        List<Order> ordersToInsert = new List<Order>();
-        for (Integer i = 0; i < 150; i++) {
-            Order o = TestDataFactory.buildDraftOrder(testAccount.Id);
-            o.ShipmentCost__c = 10;
-            ordersToInsert.add(o);
-        }
-        insert ordersToInsert;
-
-        List<OrderItem> itemsToInsert = new List<OrderItem>();
-        for (Order o : ordersToInsert) {
-            itemsToInsert.add(TestDataFactory.buildOrderItem(o.Id, pbe.Id, 1, 100));
-        }
-        insert itemsToInsert;
-
-        for (Order o : ordersToInsert) {
-            o.Status = 'Activated';
-        }
-
-        Test.startTest();
-        update ordersToInsert;
-        Test.stopTest();
-
-        Account updatedAccount = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
-        System.assertEquals(15000, updatedAccount.Chiffre_d_affaire__c, 'Les 150 commandes activees doivent etre comptees une seule fois chacune');
+    List<Order> ordersToInsert = new List<Order>();
+    for (Integer i = 0; i < 150; i++) {
+      Order o = TestDataFactory.buildDraftOrder(testAccount.Id);
+      o.ShipmentCost__c = 10;
+      ordersToInsert.add(o);
     }
-        @isTest
-    static void testModifyingAlreadyActivatedOrder_DoesNotCountItAgain() {
-        Account testAccount = TestDataFactory.buildAccount('Compte Double Comptage');
-        insert testAccount;
+    insert ordersToInsert;
 
-        PricebookEntry pbe = TestDataFactory.createPricebookEntry(100);
+    List<OrderItem> itemsToInsert = new List<OrderItem>();
+    for (Order o : ordersToInsert) {
+      itemsToInsert.add(TestDataFactory.buildOrderItem(o.Id, pbe.Id, 1, 100));
+    }
+    insert itemsToInsert;
 
-        Order order = TestDataFactory.buildDraftOrder(testAccount.Id);
-        insert order;
-
-        OrderItem item = TestDataFactory.buildOrderItem(order.Id, pbe.Id, 1, 100);
-        insert item;
-
-        order.Status = 'Activated';
-        update order;
-
-        Account afterActivation = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
-        System.assertEquals(100, afterActivation.Chiffre_d_affaire__c, 'La commande activee doit etre comptee une fois');
-
-        update new Order(Id = order.Id, Description = 'Modification sans changement de statut');
-
-        Account afterModification = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
-        System.assertEquals(100, afterModification.Chiffre_d_affaire__c, 'Modifier une commande deja activee ne doit pas la recompter');
+    for (Order o : ordersToInsert) {
+      o.Status = 'Activated';
     }
 
-        @isTest
-    static void testProductPriceChange_DoesNotChangeActivatedOrderNorChiffreAffaire() {
-        Account testAccount = TestDataFactory.buildAccount('Compte Prix Produit');
-        insert testAccount;
+    Test.startTest();
+    update ordersToInsert;
+    Test.stopTest();
 
-        PricebookEntry pbe = TestDataFactory.createPricebookEntry(100);
+    Account updatedAccount = [
+      SELECT Chiffre_d_affaire__c
+      FROM Account
+      WHERE Id = :testAccount.Id
+    ];
+    System.assertEquals(
+      15000,
+      updatedAccount.Chiffre_d_affaire__c,
+      'Les 150 commandes activees doivent etre comptees une seule fois chacune'
+    );
+  }
+  @isTest
+  static void testModifyingAlreadyActivatedOrder_DoesNotCountItAgain() {
+    Account testAccount = TestDataFactory.buildAccount(
+      'Compte Double Comptage'
+    );
+    insert testAccount;
 
-        Order order = TestDataFactory.buildDraftOrder(testAccount.Id);
-        insert order;
-        insert TestDataFactory.buildOrderItem(order.Id, pbe.Id, 3, 100);
+    PricebookEntry pbe = TestDataFactory.createPricebookEntry(100);
 
-        order.Status = 'Activated';
-        update order;
+    Order order = TestDataFactory.buildDraftOrder(testAccount.Id);
+    insert order;
 
-        Account afterActivation = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
-        System.assertEquals(300, afterActivation.Chiffre_d_affaire__c, 'La commande activee doit etre comptee : 3 x 100');
+    OrderItem item = TestDataFactory.buildOrderItem(order.Id, pbe.Id, 1, 100);
+    insert item;
 
-        // Mise a jour hebdomadaire du prix du produit
-        pbe.UnitPrice = 200;
-        update pbe;
+    order.Status = 'Activated';
+    update order;
 
-        OrderItem itemAfterPriceChange = [SELECT UnitPrice FROM OrderItem WHERE OrderId = :order.Id];
-        Order orderAfterPriceChange = [SELECT TotalAmount FROM Order WHERE Id = :order.Id];
-        Account accountAfterPriceChange = [SELECT Chiffre_d_affaire__c FROM Account WHERE Id = :testAccount.Id];
+    Account afterActivation = [
+      SELECT Chiffre_d_affaire__c
+      FROM Account
+      WHERE Id = :testAccount.Id
+    ];
+    System.assertEquals(
+      100,
+      afterActivation.Chiffre_d_affaire__c,
+      'La commande activee doit etre comptee une fois'
+    );
 
-        System.assertEquals(100, itemAfterPriceChange.UnitPrice, 'La ligne de commande doit garder son prix dorigine');
-        System.assertEquals(300, orderAfterPriceChange.TotalAmount, 'Le montant de la commande activee ne doit pas suivre le nouveau prix');
-        System.assertEquals(300, accountAfterPriceChange.Chiffre_d_affaire__c, 'Le chiffre daffaires ne doit pas changer apres une mise a jour de prix');
-    }
+    update new Order(
+      Id = order.Id,
+      Description = 'Modification sans changement de statut'
+    );
+
+    Account afterModification = [
+      SELECT Chiffre_d_affaire__c
+      FROM Account
+      WHERE Id = :testAccount.Id
+    ];
+    System.assertEquals(
+      100,
+      afterModification.Chiffre_d_affaire__c,
+      'Modifier une commande deja activee ne doit pas la recompter'
+    );
+  }
+
+  @isTest
+  static void testProductPriceChange_DoesNotChangeActivatedOrderNorChiffreAffaire() {
+    Account testAccount = TestDataFactory.buildAccount('Compte Prix Produit');
+    insert testAccount;
+
+    PricebookEntry pbe = TestDataFactory.createPricebookEntry(100);
+
+    Order order = TestDataFactory.buildDraftOrder(testAccount.Id);
+    insert order;
+    insert TestDataFactory.buildOrderItem(order.Id, pbe.Id, 3, 100);
+
+    order.Status = 'Activated';
+    update order;
+
+    Account afterActivation = [
+      SELECT Chiffre_d_affaire__c
+      FROM Account
+      WHERE Id = :testAccount.Id
+    ];
+    System.assertEquals(
+      300,
+      afterActivation.Chiffre_d_affaire__c,
+      'La commande activee doit etre comptee : 3 x 100'
+    );
+
+    // Mise a jour hebdomadaire du prix du produit
+    pbe.UnitPrice = 200;
+    update pbe;
+
+    OrderItem itemAfterPriceChange = [
+      SELECT UnitPrice
+      FROM OrderItem
+      WHERE OrderId = :order.Id
+    ];
+    Order orderAfterPriceChange = [
+      SELECT TotalAmount
+      FROM Order
+      WHERE Id = :order.Id
+    ];
+    Account accountAfterPriceChange = [
+      SELECT Chiffre_d_affaire__c
+      FROM Account
+      WHERE Id = :testAccount.Id
+    ];
+
+    System.assertEquals(
+      100,
+      itemAfterPriceChange.UnitPrice,
+      'La ligne de commande doit garder son prix dorigine'
+    );
+    System.assertEquals(
+      300,
+      orderAfterPriceChange.TotalAmount,
+      'Le montant de la commande activee ne doit pas suivre le nouveau prix'
+    );
+    System.assertEquals(
+      300,
+      accountAfterPriceChange.Chiffre_d_affaire__c,
+      'Le chiffre daffaires ne doit pas changer apres une mise a jour de prix'
+    );
+  }
 }

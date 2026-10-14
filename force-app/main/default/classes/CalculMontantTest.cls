@@ -18,7 +18,9 @@ private class CalculMontantTest {
       TestDataFactory.buildOrderItem(order2.Id, pbe.Id, 1, 100)
     };
 
+    Test.startTest();
     update new List<Order>{ order1, order2 };
+    Test.stopTest();
 
     Order updatedOrder1 = [
       SELECT NetAmount__c

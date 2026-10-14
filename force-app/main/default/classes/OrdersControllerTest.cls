@@ -23,7 +23,9 @@ private class OrdersControllerTest {
     orderB_Activated.Status = 'Activated';
     update new List<Order>{ orderA_Activated, orderB_Activated };
 
+    Test.startTest();
     Decimal result = OrdersController.getSumOrdersByAccount(accountA.Id);
+    Test.stopTest();
 
     System.assertEquals(
       100,

@@ -69,10 +69,12 @@ private class UpdateAccountCATest {
       'La commande activee doit etre comptee une fois'
     );
 
+    Test.startTest();
     update new Order(
       Id = order.Id,
       Description = 'Modification sans changement de statut'
     );
+    Test.stopTest();
 
     Account afterModification = [
       SELECT Chiffre_d_affaire__c
@@ -113,7 +115,9 @@ private class UpdateAccountCATest {
 
     // Mise a jour hebdomadaire du prix du produit
     pbe.UnitPrice = 200;
+    Test.startTest();
     update pbe;
+    Test.stopTest();
 
     OrderItem itemAfterPriceChange = [
       SELECT UnitPrice
